@@ -18,9 +18,9 @@ class TemperatureSensor():
                 raise IOError('Read bad data from {}'.format( self ))
             sensor_count = lines[1].split(' ')[-1].lstrip('t=')
             temp_c = float(sensor_count) / 1000.0
-            temp_f = temp_c * 9.0 / 5.0 + 32.0
+            temp_f = round(temp_c * 9.0 / 5.0 + 32.0, 2)
             
-            logger.debug('{} read {}.'.format( self, temp_f ))
+            logger.debug('{} read {}.'.format( self, temp_f, 2) )
             return temp_f
             
 
