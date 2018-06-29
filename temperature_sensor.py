@@ -19,7 +19,7 @@ class TemperatureSensor:
         self._wm = pyinotify.WatchManager()
         self._notifier = pyinotify.ThreadedNotifier(self._wm, self.EventHandler())
         self._watches = self._wm.add_watch('/tmp', pyinotify.IN_DELETE | pyinotify.IN_MODIFY, rec=True)
-        self.notifier.start()
+        self._notifier.start()
 
     def read(self):
         with open(self._device_file, 'r') as content_file:
