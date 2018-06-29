@@ -7,7 +7,8 @@ mandrake_url = 'https://script.google.com/macros/s/AKfycbw5euftq51NMhMbY8QqloVmR
 interval = 60*15
 logger = logging.getLogger(__name__)
 
-def detectOneWireSensors():
+
+def detect_one_wire_sensors():
     w1_root_path = "/sys/bus/w1/devices"
     devices = []
     for file_name in os.listdir( w1_root_path ):
@@ -19,32 +20,32 @@ def detectOneWireSensors():
     logger.debug( "Found {} onewire devices: \n\t{}".format( len(devices), '\n\t'.join([str(d) for d in devices])))
     return devices
 
-def postToCloud( data, url ):
-    req = requests.get(url, params=data)
-    logger.debug('Request got {} to {}'.format( req.status_code, url ))
 
+def post_to_gsheets(req_data, url):
+    req = requests.get(url, params=req_data)
+    logger.debug('Request got {} to {}'.format(req.status_code, url))
 
 
 logging.basicConfig(level=logging.INFO)
-sensors = detectOneWireSensors()
+sensors = detect_one_wire_sensors()
 water_sensor_found = False
 air_sensor_found = False
 for sens in sensors:
-    if( sens.device_id == '28-0218405755ff' ):
+    if sens.device_id == '28-0218405755ff':
         logger.info("Water Temperature sensor found!")
         water_sensor_found = True
         water_sensor = sens
 
-    if( sens.device_id == '28-0218405652ff' ):
+    if sens.device_id == '28-0218405652ff':
         logger.info("Air Temperature sensor found!")
         air_sensor_found = True
         air_sensor = sens
 
-if( not water_sensor_found ):
+if not water_sensor_found:
     logger.fatal('Failed to find water temperature sensor. Terminating!')
     sys.exit()
     
-if( not air_sensor_found ):
+if not air_sensor_found:
     logger.fatal('Failed to find air temperature sensor. Terminating!')
     sys.exit()
 
@@ -62,8 +63,8 @@ while True:
     data['Air Temperature'] = air_temp
     data['Water Temperature'] = water_temp
     
-    postToCloud( data, mandrake_url )
+    postToCloud(data, mandrake_url)
 
-    sleep_time = max(0, interval - (time.time() - start_time))
-    logger.info('Sleeping {} to make an interval of {}'.format( sleep_time, interval))
-    time.sleep( sleep_time )
+    sleep_time = max(0, interval - int(time.time() - start_time))
+    logger.info('Sleeping {} to make an interval of {}'.format(sleep_time, interval))
+    time.sleep(sleep_time)
