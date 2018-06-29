@@ -20,8 +20,9 @@ def detectOneWireSensors():
     return devices
 
 def postToCloud( data, url ):
-    req = requests.get(url, params=data)
-    logger.debug('Request got {} to {}'.format( req.status_code, url ))
+    pass
+    #req = requests.get(url, params=data)
+    #logger.debug('Request got {} to {}'.format( req.status_code, url ))
 
 
 
