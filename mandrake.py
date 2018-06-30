@@ -1,70 +1,98 @@
 #!/usr/bin/python3
-import os, time, requests, sys, datetime
-from temperature_sensor import TemperatureSensor
 import logging
+from temperature_sensor import *
+from mandrake_config import *
+from database import *
+import requests
+import argparse
 
-mandrake_url = 'https://script.google.com/macros/s/AKfycbw5euftq51NMhMbY8QqloVmRdzq3r791jULNb2P0lPecNIfPEQ/exec'
-interval = 60*15
 logger = logging.getLogger(__name__)
 
-
-def detect_one_wire_sensors():
-    w1_root_path = "/sys/bus/w1/devices"
-    devices = []
-    for file_name in os.listdir( w1_root_path ):
-        file_path = os.path.join( w1_root_path, file_name)
-        if os.path.isdir( file_path ) and "w1_bus_master" not in file_name:
-            device_path = os.path.join(file_path, "w1_slave")
-            devices.append( TemperatureSensor( file_name, device_path ) )
-
-    logger.debug( "Found {} onewire devices: \n\t{}".format( len(devices), '\n\t'.join([str(d) for d in devices])))
-    return devices
+parser = argparse.ArgumentParser()
+parser.add_argument("-v", "--verbose", help="Set log level ot debugging.", action="store_true")
+args = parser.parse_args()
+if args.verbose:
+    logging.basicConfig(level=logging.DEBUG)
+else:
+    logging.basicConfig(level=logging.INFO)
 
 
-def post_to_gsheets(req_data, url):
-    req = requests.get(url, params=req_data)
-    logger.debug('Request got {} to {}'.format(req.status_code, url))
+def initialize_sensors():
+    sensor_config = MandrakeConfig['Sensors']
+    sensors_data = {}
+    for sensor_type in sensor_config:
+        if sensor_type == 'Temperature':
+            sensors_data.update(temperature_sensor_factory(sensor_config['Temperature']))
+        else:
+            raise NotImplementedError("Sensor of type {} not supported!".format(sensor_type))
+    return sensors_data
 
 
-logging.basicConfig(level=logging.INFO)
-sensors = detect_one_wire_sensors()
-water_sensor_found = False
-air_sensor_found = False
-for sens in sensors:
-    if sens.device_id == '28-0218405755ff':
-        logger.info("Water Temperature sensor found!")
-        water_sensor_found = True
-        water_sensor = sens
+def collect_sensor_data(sensors_to_check):
+    results = {}
+    logger.info('Collecting Sensor Data for {}'.format(', '.join(sensors_to_check.keys())))
+    for sensor_key in sensors_to_check.keys():
+        sensor = sensors_to_check[sensor_key]
+        results[sensor.record_id] = sensor.read()
+        logger.info('Read {} from {}'.format(results[sensor.record_id], sensor))
+    return results
 
-    if sens.device_id == '28-0218405652ff':
-        logger.info("Air Temperature sensor found!")
-        air_sensor_found = True
-        air_sensor = sens
 
-if not water_sensor_found:
-    logger.fatal('Failed to find water temperature sensor. Terminating!')
-    sys.exit()
-    
-if not air_sensor_found:
-    logger.fatal('Failed to find air temperature sensor. Terminating!')
-    sys.exit()
+def post_data(req_data, req_url):
+    req_data['Timestamp'] = time.time()
+    req = requests.get(req_url, params=req_data)
+    if not req.status_code == 200:
+        logger.error('Request got {} to {}'.format(req.status_code, req_url))
+    else:
+        logger.debug('HTTP data logging request got {} to {}'.format(req.status_code, req_url))
 
-while True:
-    start_time = time.time()
-    data = {}
-    timestamp = datetime.datetime.now().isoformat()
-    data['Timestamp'] = timestamp
-    logging.info('Gathering data for: {}'.format( timestamp ))
-    
-    water_temp = water_sensor.read()
-    air_temp = air_sensor.read()
-    logger.info('>>> Temperatures: air={} water={}'.format( air_temp, water_temp ))
-    
-    data['Air Temperature'] = air_temp
-    data['Water Temperature'] = water_temp
-    
-    postToCloud(data, mandrake_url)
 
-    sleep_time = max(0, interval - int(time.time() - start_time))
-    logger.info('Sleeping {} to make an interval of {}'.format(sleep_time, interval))
+def record_data(sensor_data):
+    try:
+        recording_config = MandrakeConfig['DataLogging']
+    except KeyError:
+        return
+    log_locations = ""
+    for record_type in recording_config:
+        if record_type == 'HTTP':
+            try:
+                for http_record in recording_config[record_type]:
+                    log_locations += http_record
+                    url = recording_config[record_type][http_record]['URL']
+                    post_data(sensor_data, url)
+            except KeyError:
+                logger.error('Syntax error in the DataLogging:HTTP config. Ignoring!')
+
+        elif record_type == 'Database':
+            log_locations += 'Database'
+            try:
+                log_to_database(sensor_data)
+            except KeyError:
+                logger.error('Syntax error in the DataLogging:Database config. Ignoring!')
+
+        else:
+            raise NotImplementedError('DataLogging type {} not supported!'.format(record_type))
+    logger.info('Logged data to {}.'.format(log_locations))
+
+
+def sleep_iteration(start):
+    interval = MandrakeConfig['General']['Interval']
+    sleep_time = max(0, interval - int(time.time() - start))
+    logger.debug('Sleeping {} to make an interval of {}'.format(sleep_time, interval))
+    if sleep_time == 0:
+        logger.warning('Not enough time to finish')
     time.sleep(sleep_time)
+
+
+sensors = initialize_sensors()
+logger.info('Successfully Initialized: {}'.format(', '.join(sensors)))
+
+logger.info('Entering Polling Loop...')
+try:
+    while True:
+        start_time = time.time()
+        data = collect_sensor_data(sensors)
+        record_data(data)
+        sleep_iteration(start_time)
+except KeyboardInterrupt:
+    pass

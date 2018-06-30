@@ -1,12 +1,19 @@
 import logging
 import time
+import os
+import random
+
 logger = logging.getLogger(__name__)
 
 
 class TemperatureSensor:
-    def __init__(self, dev_id, dev_file):
+    def __init__(self, dev_id, rec_id):
         self.device_id = dev_id
-        self._device_file = dev_file
+        self.record_id = rec_id
+        dev_path = os.path.join('/sys/bus/w1/devices', self.device_id, 'w1_slave')
+        if not os.path.isdir(dev_path):
+            raise IOError('Sensor could not be detected: {}'.format(self))
+        self._device_file = dev_path
         self.last_read = None
 
     def read(self):
@@ -27,4 +34,44 @@ class TemperatureSensor:
 
     def __repr__(self):
         return "TemperatureSensor {}".format(self.device_id)
+
+
+class MockTemperatureSensor(TemperatureSensor):
+    def __init__(self, dev_id, rec_id):
+        self.device_id = dev_id
+        self.record_id = rec_id
+        self._device_file = None
+        self.last_read = None
+        self.mock_read_value = random.random
+
+    def read(self):
+        logger.debug('{} read {}.'.format(self, self.mock_read_value))
+        self.last_read = time.time()
+        if callable(self.mock_read_value):
+            return self.mock_read_value()
+        else:
+            return self.mock_read_value
+
+    def __repr__(self):
+        return "MockTemperatureSensor {}".format(self.device_id)
+
+
+def temperature_sensor_factory(temp_sensor_configs):
+    temp_sensors = {}
+    for temp_sensor_name in temp_sensor_configs:
+        temp_sensor_data = temp_sensor_configs[temp_sensor_name]
+        device_id = temp_sensor_data['DeviceID']
+        recording_id = temp_sensor_data['RecordingID']
+
+        if 'Mock' in temp_sensor_data.keys() and temp_sensor_data['Mock'] == 'True':
+            temp_sensors[temp_sensor_name] = MockTemperatureSensor(device_id, recording_id)
+        else:
+            temp_sensors[temp_sensor_name] = TemperatureSensor(device_id, recording_id)
+    return temp_sensors
+
+
+
+
+
+
 

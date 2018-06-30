@@ -1,0 +1,22 @@
+DataLogging:
+#  HTTP:
+#    GoogleSheet:
+#      URL: 'https://script.google.com/macros/s/AKfycbw5euftq51NMhMbY8QqloVmRdzq3r791jULNb2P0lPecNIfPEQ/exec'
+
+  Database:
+      Path: 'default'
+
+Sensors:
+  Temperature:
+    AirTemperature:
+      DeviceID: '28-0218405652ff'
+      RecordingID: 'Air_Temperature'
+      Mock: 'True'
+
+    WaterTemperature:
+      DeviceID: '28-0218405755ff'
+      RecordingID: 'Water_Temperature'
+      Mock: 'True'
+
+General:
+  Interval: 5
