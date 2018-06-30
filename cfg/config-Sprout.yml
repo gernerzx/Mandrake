@@ -1,21 +1,20 @@
 DataLogging:
-  HTTP:
-    URL: 'https://script.google.com/macros/s/AKfycbw5euftq51NMhMbY8QqloVmRdzq3r791jULNb2P0lPecNIfPEQ/exec'
-    Verb: 'GET'
+#  HTTP:
+#    GoogleSheet:
+#      URL: 'https://script.google.com/macros/s/AKfycbw5euftq51NMhMbY8QqloVmRdzq3r791jULNb2P0lPecNIfPEQ/exec'
 
   Database:
-    Location: 'default'
-    Name: 'mandrake.sqlite'
+      Path: 'default'
 
 Sensors:
   Temperature:
     AirTemperature:
       DeviceID: '28-0218405652ff'
-      RecordingID: 'Air Temperature'
+      RecordingID: 'Air_Temperature'
 
-      WaterTemperature:
-        DeviceID: '28-0218405755ff'
-        RecordingID: 'Water Temperature'
+    WaterTemperature:
+      DeviceID: '28-0218405755ff'
+      RecordingID: 'Water_Temperature'
 
 General:
   Interval: 300
