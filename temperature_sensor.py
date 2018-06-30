@@ -11,8 +11,8 @@ class TemperatureSensor:
         self.device_id = dev_id
         self.record_id = rec_id
         dev_path = os.path.join('/sys/bus/w1/devices', self.device_id, 'w1_slave')
-        if not os.path.isdir(dev_path):
-            raise IOError('Sensor could not be detected: {}'.format(self))
+        if not os.path.isfile(dev_path):
+            raise IOError('Sensor could not be detected: {} at {}'.format(self, dev_path))
         self._device_file = dev_path
         self.last_read = None
 
