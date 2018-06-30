@@ -1,0 +1,21 @@
+DataLogging:
+  HTTP:
+    URL: 'https://script.google.com/macros/s/AKfycbw5euftq51NMhMbY8QqloVmRdzq3r791jULNb2P0lPecNIfPEQ/exec'
+    Verb: 'GET'
+
+  Database:
+    Location: 'default'
+    Name: 'mandrake.sqlite'
+
+Sensors:
+  Temperature:
+    AirTemperature:
+      DeviceID: '28-0218405652ff'
+      RecordingID: 'Air Temperature'
+
+      WaterTemperature:
+        DeviceID: '28-0218405755ff'
+        RecordingID: 'Water Temperature'
+
+General:
+  Interval: 300
