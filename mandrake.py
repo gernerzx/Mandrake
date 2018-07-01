@@ -33,7 +33,7 @@ def initialize_sensors():
 
 def collect_sensor_data(sensors_to_check):
     results = {}
-    logger.info('Collecting Sensor Data for {}'.format(', '.join(sensors_to_check.keys())))
+    logger.debug('Collecting Sensor Data for {}'.format(', '.join(sensors_to_check.keys())))
     for sensor_key in sensors_to_check.keys():
         sensor = sensors_to_check[sensor_key]
         results[sensor.record_id] = sensor.read()
@@ -60,44 +60,75 @@ def record_database(db_connector, sensor_data):
             orm_obj = getattr(database, sensor_name)
             db_session = orm_obj.create(timestamp=db_timestamp, value=sensor_data[sensor_name])
             db_session.save()
-            logger.info('Logged {}@{}->{} to {}'.format(db_timestamp, sensor_name, sensor_data[sensor_name], db_connector))
         except AttributeError:
             logger.error('ORM class for {} not defined!'.format(sensor_name))
             sys.exit(-1)
+    logger.info('Logged {} sensors to {}'.format(', '.join(sensor_data.keys()), db_connector))
 
 
-def sleep_iteration(rate, interval):
-    sleep_time = max(0, interval - int(time.time() - rate))
-    logger.debug('Sleeping {} to make an interval of {}'.format(sleep_time, interval))
+def sleep_iteration(start_time, cyc_rate):
+    sleep_time = max(0, cyc_rate - int(time.time() - start_time))
+    logger.debug('Sleeping {} to make an interval of {}'.format(sleep_time, rate))
     if sleep_time == 0:
         logger.warning('Not enough time to finish')
-    time.sleep(sleep_time)
+    thread_exit.wait(float(sleep_time))
 
 
-def record_loop(rate, recorder, target):
-    this_thread = threading.currentThread()
-    while getattr(this_thread, "continue_execution", True):
+def record_loop(rate, recorder, target, name):
+    while not thread_exit.is_set():
         start_time = time.time()
         recorder(target, collect_sensor_data(sensors))
         sleep_iteration(start_time, rate)
-    logger.info("Shutting down Recorder:{}:{} thread.".format(recorder, target))
+        logger.info('Waking up {}'.format(name))
+    logger.info("Shutting down {} recorder thread.".format(name))
 
 
 # Main Code
 sensors = initialize_sensors()
 logger.info('Successfully Initialized: {}'.format(', '.join(sensors)))
 
-try:
-    recorder_threads = []
-    recorder_threads.append(threading.Thread(target=record_loop, args=(10, record_database, database.MandrakeDatabase)))
+recorder_threads = list()
+recorder_config = MandrakeConfig['DataLogging']
+thread_exit = threading.Event()
+thread_exit.clear()
+for recorder_type in recorder_config:
+    if recorder_type == 'HTTP':
+        try:
+            for http_recorder in recorder_config[recorder_type]:
+                req_url = http_recorder['URL']
+                req_rate = http_recorder['Rate']
+                recorder_threads.append(threading.Thread(target=record_loop,
+                                        args=(req_rate, record_http_service, req_url, http_recorder)))
+                logger.info('Successfully initialized {}:{} recorder'.format(recorder_type, http_recorder))
+        except KeyError:
+            logger.fatal('HTTP recorder configs must have the URL and Rate items')
+            sys.exit(-1)
 
-    for thread in recorder_threads:
-        thread.start()
+    elif recorder_type == 'Database':
+        try:
+            database_config = recorder_config[recorder_type]
+            path = database_config['Path']
+            if path.lower() == 'default':
+                path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'mandrake.sqlite')
+            rate = database_config['Rate']
+            recorder_threads.append(threading.Thread(target=record_loop,
+                                    args=(rate, record_database, path, recorder_type)))
+            logger.info('Successfully initialized Database recorder')
+        except KeyError:
+            logger.fatal('Database recorder must have the Path and Rate items')
+
+    else:
+        logger.error('Unsupported data logging type: {}'.format(recorder_type))
+
+for thread in recorder_threads:
+    thread.start()
+
+try:
     for thread in recorder_threads:
         thread.join()
 except KeyboardInterrupt:
     logger.info('Shutting down threads!')
-    for thread in recorder_threads:
-        thread.continue_execution = False
-    for thread in recorder_threads:
-        thread.join()
+    thread_exit.set()
+for thread in recorder_threads:
+    thread.join()
+logger.info('Mandrake Shutdown Complete!')

@@ -5,7 +5,6 @@ DataLogging:
       Rate: 300
 
   Database:
-    LoggingDB:
       Path: '/home/mandrake/mandrake_db/mandrake.sqlite'
       Rate: 60
 

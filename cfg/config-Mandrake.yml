@@ -1,6 +1,5 @@
 DataLogging:
   Database:
-    LoggingDB:
       Path: 'default'
       Rate: 60
 
