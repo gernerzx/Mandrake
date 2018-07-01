@@ -52,19 +52,19 @@ def record_data(sensor_data):
         recording_config = MandrakeConfig['DataLogging']
     except KeyError:
         return
-    log_locations = ""
+    log_locations = []
     for record_type in recording_config:
         if record_type == 'HTTP':
             try:
                 for http_record in recording_config[record_type]:
-                    log_locations += http_record
+                    log_locations.append(http_record)
                     url = recording_config[record_type][http_record]['URL']
                     post_data(sensor_data, url)
             except KeyError:
                 logger.error('Syntax error in the DataLogging:HTTP config. Ignoring!')
 
         elif record_type == 'Database':
-            log_locations += 'Database'
+            log_locations.append('Database')
             try:
                 log_to_database(sensor_data)
             except KeyError:
@@ -72,7 +72,7 @@ def record_data(sensor_data):
 
         else:
             raise NotImplementedError('DataLogging type {} not supported!'.format(record_type))
-    logger.info('Logged data to {}.'.format(log_locations))
+    logger.info('Logged data to {}.'.format(', '.join(log_locations)))
 
 
 def sleep_iteration(start):
