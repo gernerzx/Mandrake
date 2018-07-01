@@ -1,5 +1,4 @@
 import peewee
-import datetime
 from mandrake_config import *
 import os
 import sys
@@ -53,14 +52,4 @@ if MandrakeDatabase:
     MandrakeDatabase.create_tables([Air_Temperature, Water_Temperature])
 
 
-def log_to_database(sensor_data):
-    db_timestamp = datetime.datetime.now()
-    for sensor_name in sensor_data:
-        try:
-            orm_obj = globals()[sensor_name]
-            db_session = orm_obj.create(timestamp=db_timestamp, value=sensor_data[sensor_name])
-            db_session.save()
-            logger.debug('Data successfully saved to database: {}@{}->{}'.format(db_timestamp, sensor_name, sensor_data[sensor_name]))
-        except KeyError:
-            logger.error('ORM class for {} not defined!'.format(sensor_name))
-            sys.exit(-1)
+

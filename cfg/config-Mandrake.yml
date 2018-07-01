@@ -1,7 +1,8 @@
 DataLogging:
   Database:
-    Path: 'default'
-    Rate: 60
+    LoggingDB:
+      Path: 'default'
+      Rate: 60
 
 Sensors:
   Temperature:

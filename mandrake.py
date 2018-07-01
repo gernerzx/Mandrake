@@ -2,9 +2,12 @@
 import logging
 from temperature_sensor import *
 from mandrake_config import *
-from database import *
+from pprint import pformat
+import database
 import requests
 import argparse
+import threading
+import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -38,61 +41,63 @@ def collect_sensor_data(sensors_to_check):
     return results
 
 
-def post_data(req_data, req_url):
-    req_data['Timestamp'] = time.time()
-    req = requests.get(req_url, params=req_data)
+def record_http_service(service_url, sensor_data):
+    sensor_data['Timestamp'] = time.time()
+    req = requests.get(service_url, params=sensor_data)
     if not req.status_code == 200:
-        logger.error('Request got {} to {}'.format(req.status_code, req_url))
+        logger.error('Request got {} to {}'.format(req.status_code, service_url))
     else:
-        logger.debug('HTTP data logging request got {} to {}'.format(req.status_code, req_url))
+        logger.debug('HTTP data logging request got {} to {}'.format(req.status_code, service_url))
+        logger.info('Logged {}@{} to {}'.format(sensor_data['Timestamp'],
+                                                pformat(zip(sensor_data.keys(), sensor_data.values())),
+                                                service_url))
 
 
-def record_data(sensor_data):
-    try:
-        recording_config = MandrakeConfig['DataLogging']
-    except KeyError:
-        return
-    log_locations = []
-    for record_type in recording_config:
-        if record_type == 'HTTP':
-            try:
-                for http_record in recording_config[record_type]:
-                    log_locations.append(http_record)
-                    url = recording_config[record_type][http_record]['URL']
-                    post_data(sensor_data, url)
-            except KeyError:
-                logger.error('Syntax error in the DataLogging:HTTP config. Ignoring!')
-
-        elif record_type == 'Database':
-            log_locations.append('Database')
-            try:
-                log_to_database(sensor_data)
-            except KeyError:
-                logger.error('Syntax error in the DataLogging:Database config. Ignoring!')
-
-        else:
-            raise NotImplementedError('DataLogging type {} not supported!'.format(record_type))
-    logger.info('Logged data to {}.'.format(', '.join(log_locations)))
+def record_database(db_connector, sensor_data):
+    db_timestamp = datetime.datetime.now()
+    for sensor_name in sensor_data:
+        try:
+            orm_obj = getattr(database, sensor_name)
+            db_session = orm_obj.create(timestamp=db_timestamp, value=sensor_data[sensor_name])
+            db_session.save()
+            logger.info('Logged {}@{}->{} to {}'.format(db_timestamp, sensor_name, sensor_data[sensor_name], db_connector))
+        except AttributeError:
+            logger.error('ORM class for {} not defined!'.format(sensor_name))
+            sys.exit(-1)
 
 
-def sleep_iteration(start):
-    interval = MandrakeConfig['General']['Interval']
-    sleep_time = max(0, interval - int(time.time() - start))
+def sleep_iteration(rate, interval):
+    sleep_time = max(0, interval - int(time.time() - rate))
     logger.debug('Sleeping {} to make an interval of {}'.format(sleep_time, interval))
     if sleep_time == 0:
         logger.warning('Not enough time to finish')
     time.sleep(sleep_time)
 
 
+def record_loop(rate, recorder, target):
+    this_thread = threading.currentThread()
+    while getattr(this_thread, "continue_execution", True):
+        start_time = time.time()
+        recorder(target, collect_sensor_data(sensors))
+        sleep_iteration(start_time, rate)
+    logger.info("Shutting down Recorder:{}:{} thread.".format(recorder, target))
+
+
+# Main Code
 sensors = initialize_sensors()
 logger.info('Successfully Initialized: {}'.format(', '.join(sensors)))
 
-logger.info('Entering Polling Loop...')
 try:
-    while True:
-        start_time = time.time()
-        data = collect_sensor_data(sensors)
-        record_data(data)
-        sleep_iteration(start_time)
+    recorder_threads = []
+    recorder_threads.append(threading.Thread(target=record_loop, args=(10, record_database, database.MandrakeDatabase)))
+
+    for thread in recorder_threads:
+        thread.start()
+    for thread in recorder_threads:
+        thread.join()
 except KeyboardInterrupt:
-    pass
+    logger.info('Shutting down threads!')
+    for thread in recorder_threads:
+        thread.continue_execution = False
+    for thread in recorder_threads:
+        thread.join()

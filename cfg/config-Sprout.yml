@@ -5,8 +5,9 @@ DataLogging:
       Rate: 300
 
   Database:
-    Path: '/home/mandrake/mandrake_db/mandrake.sqlite'
-    Rate: 60
+    LoggingDB:
+      Path: '/home/mandrake/mandrake_db/mandrake.sqlite'
+      Rate: 60
 
 Sensors:
   Temperature:
