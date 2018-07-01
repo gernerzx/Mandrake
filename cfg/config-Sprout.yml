@@ -2,9 +2,11 @@ DataLogging:
   HTTP:
     GoogleSheet:
       URL: 'https://script.google.com/macros/s/AKfycbw5euftq51NMhMbY8QqloVmRdzq3r791jULNb2P0lPecNIfPEQ/exec'
+      Rate: 300
 
   Database:
-      Path: '/home/mandrake/mandrake_db/mandrake.sqlite'
+    Path: '/home/mandrake/mandrake_db/mandrake.sqlite'
+    Rate: 60
 
 Sensors:
   Temperature:
@@ -15,6 +17,3 @@ Sensors:
     WaterTemperature:
       DeviceID: '28-0218405755ff'
       RecordingID: 'Water_Temperature'
-
-General:
-  Interval: 300
