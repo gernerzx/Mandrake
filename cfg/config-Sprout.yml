@@ -1,10 +1,10 @@
 DataLogging:
-#  HTTP:
-#    GoogleSheet:
-#      URL: 'https://script.google.com/macros/s/AKfycbw5euftq51NMhMbY8QqloVmRdzq3r791jULNb2P0lPecNIfPEQ/exec'
+  HTTP:
+    GoogleSheet:
+      URL: 'https://script.google.com/macros/s/AKfycbw5euftq51NMhMbY8QqloVmRdzq3r791jULNb2P0lPecNIfPEQ/exec'
 
   Database:
-      Path: 'default'
+      Path: '/home/mandrake/mandrake_db/mandrake.sqlite'
 
 Sensors:
   Temperature:
