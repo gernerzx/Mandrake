@@ -29,7 +29,7 @@ class Water_Temperature(peewee.Model):
     """
     ORM model of the Water Temperature table
     """
-    timestamp = peewee.DateTimeField(default=datetime.datetime.now)
+    timestamp = peewee.DateTimeField()
     value = peewee.DoubleField()
 
     class Meta:
@@ -40,7 +40,7 @@ class Air_Temperature(peewee.Model):
     """
     ORM model of the Air Temperature table
     """
-    timestamp = peewee.DateTimeField(default=datetime.datetime.now)
+    timestamp = peewee.DateTimeField()
     value = peewee.DoubleField()
 
     class Meta:
@@ -54,12 +54,13 @@ if MandrakeDatabase:
 
 
 def log_to_database(sensor_data):
+    db_timestamp = datetime.datetime.now()
     for sensor_name in sensor_data:
         try:
             orm_obj = globals()[sensor_name]
-            db_session = orm_obj.create(value=sensor_data[sensor_name])
+            db_session = orm_obj.create(timestamp=db_timestamp, value=sensor_data[sensor_name])
             db_session.save()
-            logger.debug('Data successfully saved to database: {}->{}'.format(sensor_name, sensor_data[sensor_name]))
+            logger.debug('Data successfully saved to database: {}@{}->{}'.format(db_timestamp, sensor_name, sensor_data[sensor_name]))
         except KeyError:
             logger.error('ORM class for {} not defined!'.format(sensor_name))
             sys.exit(-1)
