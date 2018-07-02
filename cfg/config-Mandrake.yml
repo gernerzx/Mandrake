@@ -1,10 +1,7 @@
 DataLogging:
-#  HTTP:
-#    GoogleSheet:
-#      URL: 'https://script.google.com/macros/s/AKfycbw5euftq51NMhMbY8QqloVmRdzq3r791jULNb2P0lPecNIfPEQ/exec'
-
   Database:
       Path: 'default'
+      Rate: 60
 
 Sensors:
   Temperature:
@@ -17,6 +14,3 @@ Sensors:
       DeviceID: '28-0218405755ff'
       RecordingID: 'Water_Temperature'
       Mock: 'True'
-
-General:
-  Interval: 5
