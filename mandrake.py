@@ -48,9 +48,7 @@ def record_http_service(service_url, sensor_data):
         logger.error('Request got {} to {}'.format(req.status_code, service_url))
     else:
         logger.debug('HTTP data logging request got {} to {}'.format(req.status_code, service_url))
-        logger.info('Logged {}@{} to {}'.format(sensor_data['Timestamp'],
-                                                pformat(zip(sensor_data.keys(), sensor_data.values())),
-                                                service_url))
+        logger.info('Logged {} to {}'.format(', '.join(sensor_data.keys()), service_url))
 
 
 def record_database(db_connector, sensor_data):
