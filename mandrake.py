@@ -2,7 +2,7 @@
 import logging
 from temperature_sensor import *
 from mandrake_config import *
-from pprint import pformat
+from pprint import pformat, pprint
 import database
 import requests
 import argparse
@@ -94,7 +94,8 @@ thread_exit.clear()
 for recorder_type in recorder_config:
     if recorder_type == 'HTTP':
         try:
-            for http_recorder in recorder_config[recorder_type]:
+            for http_recorder_name in recorder_config[recorder_type]:
+                http_recorder = recorder_config[recorder_type][http_recorder_name]
                 req_url = http_recorder['URL']
                 req_rate = http_recorder['Rate']
                 recorder_threads.append(threading.Thread(target=record_loop,
