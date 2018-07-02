@@ -97,7 +97,7 @@ for recorder_type in recorder_config:
                 req_url = http_recorder['URL']
                 req_rate = http_recorder['Rate']
                 recorder_threads.append(threading.Thread(target=record_loop,
-                                        args=(req_rate, record_http_service, req_url, http_recorder)))
+                                        args=(req_rate, record_http_service, req_url, http_recorder_name)))
                 logger.info('Successfully initialized {}:{} recorder'.format(recorder_type, http_recorder))
         except KeyError:
             logger.fatal('HTTP recorder configs must have the URL and Rate items')
